@@ -865,18 +865,37 @@ html[dir="rtl"] .msg-body ul, html[dir="rtl"] .msg-body ol { padding-left: 0; pa
   padding: 2px 6px; border-radius: 4px; font-size: 0.84em;
 }
 
-/* TTS */
+/* Message Actions — Copy, TTS, Edit */
 .msg-actions {
-  display: flex; gap: 6px; margin-top: 8px; padding-top: 6px;
+  display: flex; gap: 4px; margin-top: 8px; padding-top: 6px;
   border-top: 1px solid var(--glass-border);
+  opacity: 0; transition: opacity 0.2s;
 }
-.tts-btn {
-  display: flex; align-items: center; gap: 5px;
+.msg-bubble:hover .msg-actions { opacity: 1; }
+
+.msg-action-btn {
+  display: flex; align-items: center; justify-content: center;
+  width: 28px; height: 28px;
   background: none; border: 1px solid var(--glass-border);
-  border-radius: var(--radius-full);
-  padding: 4px 10px; font-size: 0.68rem;
-  color: var(--text-muted); cursor: pointer;
-  font-family: var(--font); transition: all 0.2s;
+  border-radius: 6px; cursor: pointer;
+  color: var(--text-muted); transition: all 0.2s;
+}
+.msg-action-btn:hover {
+  background: var(--surface); color: var(--text-dim);
+  border-color: var(--glass-border-hover);
+}
+.msg-action-btn.playing {
+  color: var(--text); background: var(--surface-active);
+  border-color: var(--glass-border-hover);
+}
+
+.tts-btn {
+  display: flex; align-items: center; justify-content: center;
+  width: 28px; height: 28px;
+  background: none; border: 1px solid var(--glass-border);
+  border-radius: 6px; cursor: pointer;
+  color: var(--text-muted); transition: all 0.2s;
+  font-family: var(--font);
 }
 .tts-btn:hover { background: var(--surface); color: var(--text-dim); border-color: var(--glass-border-hover); }
 .tts-btn.playing { color: var(--text); background: var(--surface-active); border-color: var(--glass-border-hover); }
