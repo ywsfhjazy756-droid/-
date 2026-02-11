@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>KAYRO AI</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Noto+Sans+Arabic:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+</head>
+<body data-theme="dark" data-bg="stars">
+
+  <canvas id="starfield"></canvas>
+  <div class="abstract-bg" id="abstractBg"></div>
+
+  <!-- ========== AUTH SCREEN ========== -->
+  <div class="auth-screen" id="authScreen">
+    <div class="auth-container">
+      <div class="auth-glass">
+        <!-- Logo -->
+        <div class="auth-logo">
+          <div class="auth-logo-ring">
+            <svg width="64" height="64" viewBox="0 0 64 64" fill="none">
+              <circle cx="32" cy="32" r="28" stroke="url(#authGrad)" stroke-width="1.5" opacity="0.6"/>
+              <circle cx="32" cy="32" r="18" stroke="white" stroke-width="0.5" opacity="0.2"/>
+              <circle cx="32" cy="32" r="8" fill="white" opacity="0.85"/>
+              <circle cx="32" cy="32" r="3" fill="black"/>
+              <circle cx="32" cy="4" r="1.5" fill="white" opacity="0.5">
+                <animateTransform attributeName="transform" type="rotate" from="0 32 32" to="360 32 32" dur="10s" repeatCount="indefinite"/>
+              </circle>
+              <defs><linearGradient id="authGrad" x1="0" y1="0" x2="64" y2="64"><stop offset="0%" stop-color="white" stop-opacity="0.8"/><stop offset="100%" stop-color="white" stop-opacity="0.1"/></linearGradient></defs>
+            </svg>
+          </div>
+          <h1 class="auth-title">
+            <span class="auth-kayro">KAYRO</span>
+            <span class="auth-ai-badge">AI</span>
+          </h1>
+          <p class="auth-subtitle" id="authSubtitle">Sign in to start your journey</p>
+        </div>
+
+        <!-- Auth Tabs -->
+        <div class="auth-tabs">
+          <button class="auth-tab active" id="loginTab" data-tab="login">
+            <span data-i18n="signIn">Sign In</span>
+          </button>
+          <button class="auth-tab" id="registerTab" data-tab="register">
+            <span data-i18n="signUp">Sign Up</span>
+          </button>
+        </div>
+
+        <!-- Login Form -->
+        <form class="auth-form" id="loginForm">
+          <div class="auth-field">
+            <label class="auth-label" data-i18n="email">Email</label>
+            <div class="auth-input-wrap">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="1.5" y="3" width="13" height="10" rx="2" stroke="currentColor" stroke-width="1"/><path d="M1.5 5L8 9L14.5 5" stroke="currentColor" stroke-width="1" stroke-linecap="round"/></svg>
+              <input type="email" id="loginEmail" class="auth-input" placeholder="name@example.com" required autocomplete="email" />
+            </div>
+          </div>
+          <div class="auth-field">
+            <label class="auth-label" data-i18n="password">Password</label>
+            <div class="auth-input-wrap">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="3" y="7" width="10" height="7" rx="2" stroke="currentColor" stroke-width="1"/><path d="M5 7V5C5 3.34 6.34 2 8 2C9.66 2 11 3.34 11 5V7" stroke="currentColor" stroke-width="1" stroke-linecap="round"/><circle cx="8" cy="10.5" r="1" fill="currentColor"/></svg>
+              <input type="password" id="loginPassword" class="auth-input" placeholder="••••••••" required autocomplete="current-password" />
+              <button type="button" class="auth-eye" id="loginEye" tabindex="-1">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M1 8C1 8 3.5 3 8 3C12.5 3 15 8 15 8C15 8 12.5 13 8 13C3.5 13 1 8 1 8Z" stroke="currentColor" stroke-width="1"/><circle cx="8" cy="8" r="2.5" stroke="currentColor" stroke-width="1"/></svg>
+              </button>
+            </div>
+          </div>
+          <button type="button" class="auth-forgot" id="forgotBtn" data-i18n="forgotPassword">Forgot password?</button>
+          <div class="auth-error" id="loginError"></div>
+          <button type="submit" class="auth-submit" id="loginSubmit">
+            <span data-i18n="signIn">Sign In</span>
+            <div class="auth-spinner" id="loginSpinner"></div>
+          </button>
+        </form>
+
+        <!-- Register Form -->
+        <form class="auth-form hidden" id="registerForm">
+          <div class="auth-field">
+            <label class="auth-label" data-i18n="fullName">Full Name</label>
+            <div class="auth-input-wrap">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="5" r="3" stroke="currentColor" stroke-width="1"/><path d="M2 14C2 11.2 4.7 9 8 9C11.3 9 14 11.2 14 14" stroke="currentColor" stroke-width="1" stroke-linecap="round"/></svg>
+              <input type="text" id="registerName" class="auth-input" placeholder="Youssef Hegazy" required maxlength="40" />
+            </div>
+          </div>
+          <div class="auth-field">
+            <label class="auth-label" data-i18n="email">Email</label>
+            <div class="auth-input-wrap">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="1.5" y="3" width="13" height="10" rx="2" stroke="currentColor" stroke-width="1"/><path d="M1.5 5L8 9L14.5 5" stroke="currentColor" stroke-width="1" stroke-linecap="round"/></svg>
+              <input type="email" id="registerEmail" class="auth-input" placeholder="name@example.com" required autocomplete="email" />
+            </div>
+          </div>
+          <div class="auth-field">
+            <label class="auth-label" data-i18n="password">Password</label>
+            <div class="auth-input-wrap">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="3" y="7" width="10" height="7" rx="2" stroke="currentColor" stroke-width="1"/><path d="M5 7V5C5 3.34 6.34 2 8 2C9.66 2 11 3.34 11 5V7" stroke="currentColor" stroke-width="1" stroke-linecap="round"/><circle cx="8" cy="10.5" r="1" fill="currentColor"/></svg>
+              <input type="password" id="registerPassword" class="auth-input" placeholder="Min 6 characters" required minlength="6" autocomplete="new-password" />
+              <button type="button" class="auth-eye" id="registerEye" tabindex="-1">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M1 8C1 8 3.5 3 8 3C12.5 3 15 8 15 8C15 8 12.5 13 8 13C3.5 13 1 8 1 8Z" stroke="currentColor" stroke-width="1"/><circle cx="8" cy="8" r="2.5" stroke="currentColor" stroke-width="1"/></svg>
+              </button>
+            </div>
+          </div>
+          <div class="auth-error" id="registerError"></div>
+          <button type="submit" class="auth-submit" id="registerSubmit">
+            <span data-i18n="createAccount">Create Account</span>
+            <div class="auth-spinner" id="registerSpinner"></div>
+          </button>
+        </form>
+
+        <!-- Divider -->
+        <div class="auth-divider">
+          <span data-i18n="or">or</span>
+        </div>
+
+        <!-- Google Sign In -->
+        <button class="auth-google" id="googleSignIn">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+            <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 01-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/>
+            <path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 009 18z" fill="#34A853"/>
+            <path d="M3.964 10.71A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/>
+            <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
+          </svg>
+          <span data-i18n="googleSign">Continue with Google</span>
+        </button>
+
+        <!-- Auth Footer -->
+        <div class="auth-footer">
+          <button class="auth-lang-toggle" id="authLangToggle">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="0.8"/><ellipse cx="7" cy="7" rx="2.5" ry="5.5" stroke="currentColor" stroke-width="0.6"/><line x1="1.5" y1="7" x2="12.5" y2="7" stroke="currentColor" stroke-width="0.6"/></svg>
+            <span id="authLangLabel">العربية</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Forgot Password Modal -->
+      <div class="auth-forgot-modal hidden" id="forgotModal">
+        <div class="auth-forgot-glass">
+          <h3 data-i18n="resetPassword">Reset Password</h3>
+          <p class="auth-forgot-desc" data-i18n="resetDesc">Enter your email to receive a reset link</p>
+          <div class="auth-field">
+            <div class="auth-input-wrap">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="1.5" y="3" width="13" height="10" rx="2" stroke="currentColor" stroke-width="1"/><path d="M1.5 5L8 9L14.5 5" stroke="currentColor" stroke-width="1" stroke-linecap="round"/></svg>
+              <input type="email" id="forgotEmail" class="auth-input" placeholder="name@example.com" required />
+            </div>
+          </div>
+          <div class="auth-error" id="forgotError"></div>
+          <div class="auth-forgot-actions">
+            <button type="button" class="auth-forgot-cancel" id="forgotCancel" data-i18n="cancel">Cancel</button>
+            <button type="button" class="auth-submit auth-submit-sm" id="forgotSubmit">
+              <span data-i18n="sendReset">Send Reset Link</span>
+              <div class="auth-spinner" id="forgotSpinner"></div>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== APP (hidden until auth) ========== -->
+  <div class="app-container hidden" id="appContainer">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-inner">
+        <div class="sidebar-header">
+          <div class="logo" id="logoBtn">
+            <div class="logo-ring">
+              <svg width="34" height="34" viewBox="0 0 34 34" fill="none">
+                <circle cx="17" cy="17" r="15" stroke="url(#lgr)" stroke-width="1.5" opacity="0.7"/>
+                <circle cx="17" cy="17" r="9" stroke="currentColor" stroke-width="0.6" opacity="0.25"/>
+                <circle cx="17" cy="17" r="4" fill="currentColor" opacity="0.85"/>
+                <circle cx="17" cy="17" r="1.5" fill="var(--bg)"/>
+                <defs><linearGradient id="lgr" x1="0" y1="0" x2="34" y2="34"><stop offset="0%" stop-color="currentColor" stop-opacity="0.9"/><stop offset="100%" stop-color="currentColor" stop-opacity="0.2"/></linearGradient></defs>
+              </svg>
+            </div>
+            <div class="logo-text-group">
+              <span class="logo-name">KAYRO</span>
+              <span class="logo-badge">AI</span>
+            </div>
+          </div>
+          <button class="sidebar-close" id="sidebarClose" aria-label="Close sidebar">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><line x1="4" y1="4" x2="14" y2="14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="14" y1="4" x2="4" y2="14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          </button>
+        </div>
+
+        <!-- User Profile Mini -->
+        <div class="sidebar-user" id="sidebarUser">
+          <div class="sidebar-user-avatar" id="sidebarUserAvatar">K</div>
+          <div class="sidebar-user-info">
+            <span class="sidebar-user-name" id="sidebarUserName">User</span>
+            <span class="sidebar-user-email" id="sidebarUserEmail">user@email.com</span>
+          </div>
+        </div>
+
+        <!-- New Chat + Temp Chat -->
+        <div class="sidebar-actions">
+          <button class="new-chat-btn" id="newChatBtn">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><line x1="9" y1="3" x2="9" y2="15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="3" y1="9" x2="15" y2="9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+            <span data-i18n="newChat">New Chat</span>
+          </button>
+          <button class="icon-btn" id="tempChatBtn" title="Temporary chat">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="7" stroke="currentColor" stroke-width="1" stroke-dasharray="3 2"/><path d="M9 5.5V9.5L12 11" stroke="currentColor" stroke-width="1" stroke-linecap="round"/></svg>
+          </button>
+        </div>
+
+        <!-- History -->
+        <div class="sidebar-section-header">
+          <div class="sidebar-label" data-i18n="history">History</div>
+          <button class="icon-btn-xs" id="clearAllBtn" title="Delete all">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3 4H11M5 4V3C5 2.45 5.45 2 6 2H8C8.55 2 9 2.45 9 3V4M6 6.5V10.5M8 6.5V10.5M4 4L4.5 11.5C4.5 12.05 4.95 12.5 5.5 12.5H8.5C9.05 12.5 9.5 12.05 9.5 11.5L10 4" stroke="currentColor" stroke-width="0.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </div>
+        <nav class="chat-history" id="chatHistory"></nav>
+
+        <!-- Footer -->
+        <div class="sidebar-footer">
+          <button class="footer-btn" id="settingsBtn" title="Settings">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="2.5" stroke="currentColor" stroke-width="1"/><path d="M8 1.5V3M8 13V14.5M1.5 8H3M13 8H14.5M3.05 3.05L4.1 4.1M11.9 11.9L12.95 12.95M3.05 12.95L4.1 11.9M11.9 4.1L12.95 3.05" stroke="currentColor" stroke-width="1" stroke-linecap="round"/></svg>
+          </button>
+          <button class="footer-btn lang-btn" id="langToggle">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1"/><ellipse cx="8" cy="8" rx="3" ry="6.5" stroke="currentColor" stroke-width="0.8"/><line x1="1.5" y1="8" x2="14.5" y2="8" stroke="currentColor" stroke-width="0.8"/></svg>
+            <span id="langLabel">العربية</span>
+          </button>
+          <button class="footer-btn" id="logoutBtn" title="Sign Out">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M6 2H4C2.9 2 2 2.9 2 4V12C2 13.1 2.9 14 4 14H6" stroke="currentColor" stroke-width="1" stroke-linecap="round"/><path d="M10.5 11.5L14 8L10.5 4.5" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/><line x1="6" y1="8" x2="14" y2="8" stroke="currentColor" stroke-width="1" stroke-linecap="round"/></svg>
+          </button>
+          <div class="sidebar-version">v7.0</div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- MAIN -->
+    <main class="main" id="main">
+      <header class="topbar" id="topbar">
+        <button class="menu-btn" id="sidebarOpen" aria-label="Open menu">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><line x1="3" y1="5" x2="17" y2="5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><line x1="3" y1="10" x2="17" y2="10" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><line x1="3" y1="15" x2="13" y2="15" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+        </button>
+        <div class="topbar-center">
+          <div class="topbar-model" id="topbarModel">
+            <div class="model-dot"></div>
+            <span data-i18n="modelName">KAYRO AI</span>
+          </div>
+        </div>
+        <div class="topbar-end">
+          <div class="status-indicator" id="statusIndicator">
+            <div class="status-dot"></div>
+            <span data-i18n="online">Online</span>
+          </div>
+        </div>
+      </header>
+
+      <!-- Temp Chat Banner -->
+      <div class="temp-banner" id="tempBanner">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="0.8" stroke-dasharray="2.5 1.8"/><path d="M7 4.5V7.2L9 8.5" stroke="currentColor" stroke-width="0.8" stroke-linecap="round"/></svg>
+        <span data-i18n="tempNotice">Temporary chat — will not be saved</span>
+        <button class="temp-banner-close" id="tempBannerClose">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><line x1="3" y1="3" x2="9" y2="9" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><line x1="9" y1="3" x2="3" y2="9" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+
+      <!-- WELCOME -->
+      <section class="welcome" id="welcomeScreen">
+        <div class="welcome-inner">
+          <div class="welcome-hero">
+            <div class="hero-glow"></div>
+            <div class="hero-logo">
+              <svg width="72" height="72" viewBox="0 0 72 72" fill="none">
+                <circle cx="36" cy="36" r="32" stroke="currentColor" stroke-width="0.8" opacity="0.15"/>
+                <circle cx="36" cy="36" r="22" stroke="currentColor" stroke-width="0.6" opacity="0.1"/>
+                <circle cx="36" cy="36" r="12" stroke="currentColor" stroke-width="0.5" opacity="0.08"/>
+                <circle cx="36" cy="36" r="6" fill="currentColor" opacity="0.8"/>
+                <circle cx="36" cy="36" r="2.5" fill="var(--bg)"/>
+                <circle cx="36" cy="4" r="1.5" fill="currentColor" opacity="0.4">
+                  <animateTransform attributeName="transform" type="rotate" from="0 36 36" to="360 36 36" dur="12s" repeatCount="indefinite"/>
+                </circle>
+              </svg>
+            </div>
+            <h1 class="hero-title">
+              <span class="hero-kayro">KAYRO</span>
+              <span class="hero-ai">AI</span>
+            </h1>
+            <p class="hero-greeting" id="heroGreeting"></p>
+            <p class="hero-subtitle" data-i18n="heroSub">Your intelligent companion for every question.</p>
+          </div>
+          <div class="samples" id="sampleGrid">
+            <button class="sample-card" data-sample="0">
+              <div class="sample-icon-wrap">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M10 2L12.5 7.5L18 8.5L14 12.5L15 18L10 15.5L5 18L6 12.5L2 8.5L7.5 7.5L10 2Z" stroke="currentColor" stroke-width="1" stroke-linejoin="round" fill="none"/></svg>
+              </div>
+              <div class="sample-content">
+                <span class="sample-title" data-i18n="s1Title">Explain quantum computing</span>
+                <span class="sample-desc" data-i18n="s1Desc">In simple terms for a beginner</span>
+              </div>
+            </button>
+            <button class="sample-card" data-sample="1">
+              <div class="sample-icon-wrap">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="3" y="3" width="14" height="14" rx="2" stroke="currentColor" stroke-width="1"/><line x1="7" y1="7" x2="13" y2="7" stroke="currentColor" stroke-width="1" stroke-linecap="round"/><line x1="7" y1="10" x2="11" y2="10" stroke="currentColor" stroke-width="1" stroke-linecap="round"/><line x1="7" y1="13" x2="13" y2="13" stroke="currentColor" stroke-width="1" stroke-linecap="round"/></svg>
+              </div>
+              <div class="sample-content">
+                <span class="sample-title" data-i18n="s2Title">Write a business plan</span>
+                <span class="sample-desc" data-i18n="s2Desc">For an innovative tech startup</span>
+              </div>
+            </button>
+            <button class="sample-card" data-sample="2">
+              <div class="sample-icon-wrap">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="7" stroke="currentColor" stroke-width="1"/><path d="M10 6V10.5L13 12.5" stroke="currentColor" stroke-width="1" stroke-linecap="round"/></svg>
+              </div>
+              <div class="sample-content">
+                <span class="sample-title" data-i18n="s3Title">Boost my productivity</span>
+                <span class="sample-desc" data-i18n="s3Desc">Daily strategies and routines</span>
+              </div>
+            </button>
+            <button class="sample-card" data-sample="3">
+              <div class="sample-icon-wrap">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><polyline points="3,14 7,6 11,12 15,4 17,8" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
+              </div>
+              <div class="sample-content">
+                <span class="sample-title" data-i18n="s4Title">Debug my code</span>
+                <span class="sample-desc" data-i18n="s4Desc">Find and fix JavaScript errors</span>
+              </div>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- CHAT -->
+      <section class="chat-area" id="chatArea">
+        <div class="chat-messages" id="chatMessages"></div>
+      </section>
+
+      <!-- INPUT -->
+      <footer class="input-bar" id="inputBar">
+        <div class="input-glass">
+          <div class="file-preview-area" id="filePreviewArea"></div>
+          <div class="input-row">
+            <button class="input-icon-btn" id="attachBtn" aria-label="Attach file" title="Attach">
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M15.2 8.4L9 14.6C7.4 16.2 4.8 16.2 3.2 14.6C1.6 13 1.6 10.4 3.2 8.8L9.4 2.6C10.4 1.6 12 1.6 13 2.6C14 3.6 14 5.2 13 6.2L6.8 12.4C6.3 12.9 5.5 12.9 5 12.4C4.5 11.9 4.5 11.1 5 10.6L10.6 5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+            </button>
+            <input type="file" id="fileInput" multiple accept="image/*,.pdf,.txt,.doc,.docx,.csv,.json,.js,.py,.html,.css" hidden />
+            <textarea id="userInput" class="chat-input" rows="1" placeholder="Ask KAYRO anything..." data-i18n-placeholder="inputPlaceholder" autocomplete="off"></textarea>
+            <button class="input-icon-btn mic-btn" id="micBtn" aria-label="Voice input" title="Voice input">
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="6.5" y="2" width="5" height="9" rx="2.5" stroke="currentColor" stroke-width="1.2"/><path d="M4 8.5C4 11.3 6.2 13.5 9 13.5C11.8 13.5 14 11.3 14 8.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><line x1="9" y1="13.5" x2="9" y2="16" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><line x1="6.5" y1="16" x2="11.5" y2="16" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+              <div class="mic-pulse" id="micPulse"></div>
+            </button>
+            <button class="send-btn" id="sendBtn" aria-label="Send" disabled>
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M3 9L15 3L9 15L8 10L3 9Z" fill="currentColor" stroke="currentColor" stroke-width="0.3" stroke-linejoin="round"/></svg>
+            </button>
+          </div>
+        </div>
+        <p class="disclaimer" data-i18n="disclaimer">KAYRO AI may produce inaccurate results. Developed by Youssef Hegazy.</p>
+      </footer>
+    </main>
+  </div>
+
+  <!-- Mobile Overlay -->
+  <div class="overlay" id="overlay"></div>
+
+  <!-- SETTINGS MODAL -->
+  <div class="modal-overlay" id="settingsOverlay">
+    <div class="modal modal-lg" id="settingsModal">
+      <div class="modal-header">
+        <h2 class="modal-title" data-i18n="settings">Settings</h2>
+        <button class="modal-close" id="settingsClose">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><line x1="4" y1="4" x2="14" y2="14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="14" y1="4" x2="4" y2="14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+      <div class="modal-body modal-scroll">
+        <div class="setting-group">
+          <label class="setting-label" data-i18n="profile">Profile</label>
+          <div class="setting-row-2col">
+            <div class="setting-field">
+              <label class="setting-sub" data-i18n="yourName">Your Name</label>
+              <input type="text" id="userNameInput" class="setting-input" placeholder="Enter your name..." data-i18n-placeholder="namePlaceholder" maxlength="30" />
+            </div>
+            <div class="setting-field">
+              <label class="setting-sub" data-i18n="yourAge">Your Age</label>
+              <input type="number" id="userAgeInput" class="setting-input" placeholder="Age" min="1" max="150" />
+            </div>
+          </div>
+        </div>
+        <div class="setting-group">
+          <label class="setting-label" data-i18n="customInstructions">Custom Instructions</label>
+          <p class="setting-desc" data-i18n="instructionsDesc">Tell KAYRO AI how to behave.</p>
+          <textarea id="customInstructionsInput" class="setting-textarea" rows="3" placeholder="e.g., Always respond in bullet points..." data-i18n-placeholder="instructionsPlaceholder" maxlength="500"></textarea>
+        </div>
+        <div class="setting-group">
+          <label class="setting-label" data-i18n="language">Language</label>
+          <div class="setting-toggle-row">
+            <button class="setting-lang-btn" data-lang="en" id="langEn">English</button>
+            <button class="setting-lang-btn" data-lang="ar" id="langAr">العربية</button>
+          </div>
+        </div>
+        <div class="setting-group">
+          <label class="setting-label" data-i18n="theme">Theme</label>
+          <div class="setting-toggle-row">
+            <button class="setting-theme-btn" data-theme="dark" id="themeDark">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M13.5 8.5C12.8 12 9.5 14 6 13.3C3.5 12.8 1.7 10.7 1.5 8.2C1.2 4.6 4 1.5 7.5 1.5C4.8 3.5 4.5 7.5 7 10C8.5 11.5 11 12 13.5 8.5Z" stroke="currentColor" stroke-width="1" fill="none"/></svg>
+              <span data-i18n="dark">Dark</span>
+            </button>
+            <button class="setting-theme-btn" data-theme="light" id="themeLight">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="3.5" stroke="currentColor" stroke-width="1"/><path d="M8 1.5V3M8 13V14.5M1.5 8H3M13 8H14.5M3.3 3.3L4.4 4.4M11.6 11.6L12.7 12.7M3.3 12.7L4.4 11.6M11.6 4.4L12.7 3.3" stroke="currentColor" stroke-width="1" stroke-linecap="round"/></svg>
+              <span data-i18n="light">Light</span>
+            </button>
+          </div>
+        </div>
+        <div class="setting-group">
+          <label class="setting-label" data-i18n="background">Background</label>
+          <div class="bg-options" id="bgOptions">
+            <button class="bg-option active" data-bg="stars"><div class="bg-preview bg-prev-stars"></div><span data-i18n="bgStars">Stars</span></button>
+            <button class="bg-option" data-bg="black"><div class="bg-preview bg-prev-black"></div><span data-i18n="bgBlack">Black</span></button>
+            <button class="bg-option" data-bg="white"><div class="bg-preview bg-prev-white"></div><span data-i18n="bgWhite">White</span></button>
+            <button class="bg-option" data-bg="abstract"><div class="bg-preview bg-prev-abstract"></div><span data-i18n="bgAbstract">Abstract</span></button>
+            <button class="bg-option" data-bg="none"><div class="bg-preview bg-prev-none"></div><span data-i18n="bgNone">None</span></button>
+          </div>
+        </div>
+        <div class="setting-group">
+          <label class="setting-label" data-i18n="account">Account</label>
+          <div class="account-info" id="accountInfo">
+            <div class="account-row">
+              <span class="account-label" data-i18n="emailLabel">Email:</span>
+              <span class="account-value" id="accountEmail">-</span>
+            </div>
+            <div class="account-row">
+              <span class="account-label" data-i18n="provider">Provider:</span>
+              <span class="account-value" id="accountProvider">-</span>
+            </div>
+          </div>
+          <button class="danger-btn" id="signOutSettingsBtn">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M5 1.5H3.5C2.67 1.5 2 2.17 2 3V11C2 11.83 2.67 12.5 3.5 12.5H5" stroke="currentColor" stroke-width="0.9" stroke-linecap="round"/><path d="M9 10L12 7L9 4" stroke="currentColor" stroke-width="0.9" stroke-linecap="round" stroke-linejoin="round"/><line x1="5" y1="7" x2="12" y2="7" stroke="currentColor" stroke-width="0.9" stroke-linecap="round"/></svg>
+            <span data-i18n="signOut">Sign Out</span>
+          </button>
+        </div>
+        <div class="setting-group">
+          <label class="setting-label" data-i18n="dangerZone">Danger Zone</label>
+          <button class="danger-btn" id="deleteAllChatsBtn">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3 4H11M5 4V3C5 2.45 5.45 2 6 2H8C8.55 2 9 2.45 9 3V4M6 6.5V10.5M8 6.5V10.5M4 4L4.5 11.5C4.5 12.05 4.95 12.5 5.5 12.5H8.5C9.05 12.5 9.5 12.05 9.5 11.5L10 4" stroke="currentColor" stroke-width="0.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span data-i18n="deleteAll">Delete all conversations</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONFIRM DIALOG -->
+  <div class="modal-overlay" id="confirmOverlay">
+    <div class="modal modal-sm">
+      <div class="modal-header">
+        <h2 class="modal-title" id="confirmTitle">Confirm</h2>
+      </div>
+      <div class="modal-body">
+        <p class="confirm-text" id="confirmText"></p>
+        <div class="confirm-actions">
+          <button class="confirm-cancel" id="confirmCancel" data-i18n="cancel">Cancel</button>
+          <button class="confirm-delete" id="confirmOk" data-i18n="delete">Delete</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- IMAGE VIEWER -->
+  <div class="image-viewer" id="imageViewer">
+    <div class="iv-toolbar">
+      <button class="iv-tool-btn" id="ivDownload" title="Download">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M10 3V13M10 13L6 9M10 13L14 9" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 15V16C3 16.6 3.4 17 4 17H16C16.6 17 17 16.6 17 16V15" stroke="white" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </button>
+      <button class="iv-tool-btn" id="ivClose" title="Close">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><line x1="5" y1="5" x2="15" y2="15" stroke="white" stroke-width="1.8" stroke-linecap="round"/><line x1="15" y1="5" x2="5" y2="15" stroke="white" stroke-width="1.8" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <img id="ivImage" src="" alt="Preview" />
+  </div>
+
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
