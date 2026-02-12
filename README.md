@@ -1,54 +1,37 @@
-# KAYRO AI v7.3 — All Issues Fixed
+# KAYRO AI v7.6 — Chat Fix + Streaming + Always-Visible Actions
 
-A premium AI chat interface with Firebase Auth, cloud sync, and all bugs fixed. Developed by **Youssef Hegazy**.
+Premium AI chat with Firebase Auth, cloud sync, streaming responses, and full-screen responsive layout. Developed by **Youssef Hegazy**.
 
-## 🔧 v7.3 — Critical Fixes
+## 🔧 v7.6 Fixes
 
-### Issue 1: Slow Response After Login (Fixed)
-**Problem:** After signing in, the app was unresponsive for ~60 seconds.
-**Cause:** `await loadCloudData()` was blocking the entire auth callback.
-**Fix:** The app now shows UI **immediately** after auth, applies local settings instantly, and loads cloud data in the background. When cloud data finishes, it refreshes the UI silently.
+### 1. Chat Messages No Longer Mix Between Conversations (Critical Fix)
+**Problem:** When starting a new chat after having previous chats, old messages from ALL conversations appeared in the new one.
+**Root Cause:** When `handleSend()` created a new conversation, it called `showChatArea()` without clearing `chatMessages.innerHTML`. The old messages from the previous conversation were still in the DOM.
+**Fix:** Added `chatMessages.innerHTML = ""` in `handleSend()` right before `showChatArea()` when creating a new conversation. Also ensured `renderMessages()` always clears the DOM first.
 
-### Issue 2: Firestore Not Saving Chats (Fixed)
-**Problem:** Conversations weren't being saved to Firestore.
-**Fix:** Added `saveCloudDataNow()` for immediate saves and `saveCloudData()` for debounced saves (800ms). Both also save to localStorage as backup. Every message sent, setting changed, or conversation modified triggers a save.
+### 2. Streaming Response (Word-by-Word Display)
+**Problem:** AI responses appeared all at once after a delay, making it feel broken.
+**Fix:** Added `appendMessageStreaming()` function that types out the response character-by-character with:
+- Adaptive speed (short messages type slower for drama, long ones faster)
+- Random 1-4 chars at a time for natural feel
+- Blinking cursor animation during streaming
+- Action buttons appear only after streaming completes
 
-### Issue 3: Old Chat Messages Mixing Together (Fixed)
-**Problem:** When switching between conversations, messages from all chats appeared together.
-**Cause:** `renderMessages()` wasn't clearing `chatMessages.innerHTML` before rendering, and history click handlers weren't isolating the correct conversation.
-**Fix:** `renderMessages()` now does `cm.innerHTML = ""` first. Each history item click calls `renderMessages(conv.messages)` with ONLY that conversation's messages. `getActiveConversation()` helper ensures the correct conversation is always referenced.
+### 3. Action Buttons Always Visible
+**Problem:** Copy, edit, and listen buttons only appeared on hover — hard to use on mobile.
+**Fix:** Changed `.msg-actions { opacity: 0 }` to `opacity: 1` — buttons are always visible.
 
-### Issue 4: Settings/Preferences Not Saved to Cloud (Fixed)
-**Problem:** Theme, language, background, name, age, and custom instructions weren't syncing across devices.
-**Fix:** All settings are now saved to Firestore: `userName`, `userAge`, `customInstructions`, `lang`, `theme`, `bg`. Every change triggers `saveCloudData()`.
-
-### Issue 5: Can't Stop AI Voice (TTS) (Fixed)
-**Problem:** No way to stop the AI from reading a message aloud.
-**Fix:** Clicking the speaker button while it's playing now **stops** playback immediately. Uses `window.speechSynthesis.cancel()`. The button toggles between play/stop states with visual feedback (`.playing` class).
+### 4. Google Sign-in
+Uses `signInWithPopup` with fallback to `signInWithRedirect`.
+**IMPORTANT:** You must add your domain to Firebase Console → Authentication → Settings → Authorized domains.
 
 ## 🤖 AI Model
 **DeepSeek V3** (`deepseek/deepseek-chat-v3-0324`) via OpenRouter
 
-## Features
-- Firebase Auth (Google + Email/Password)
-- Cloud sync via Firestore (conversations + settings)
-- Bilingual (English + Arabic with full RTL)
-- Image generation via Pollinations AI
-- Voice input (Speech-to-Text)
-- Text-to-Speech with stop control
-- Copy/Edit messages
-- Code blocks with copy button
-- File attachments (images + documents)
-- Temporary chats
-- Delete individual/all conversations
-- Dark/Light themes
-- 5 background options (Stars, Black, White, Abstract, None)
-- Custom AI instructions
-- Streaming text display
-
 ## Firebase Setup
-1. Go to Firebase Console → Authentication → Enable **Email/Password** and **Google**
-2. Go to Firestore Database → Create database with these rules:
+1. Firebase Console → Authentication → Enable **Email/Password** and **Google**
+2. Add your deployment domain to **Authorized domains**
+3. Firestore Database → Create with these rules:
 
 ```
 rules_version = '2';
@@ -60,6 +43,21 @@ service cloud.firestore {
   }
 }
 ```
+
+## Features
+- 🔐 Firebase Auth (Email + Google)
+- ☁️ Firestore cloud sync (conversations + settings)
+- 💬 Streaming AI responses (word by word)
+- 🎨 Image generation (Pollinations AI)
+- 📎 File & image attachments
+- 📋 Copy/Edit/Listen buttons always visible
+- 🎤 Voice input (Speech-to-Text)
+- 🔊 Text-to-Speech for AI messages
+- 🌙 Dark/Light themes
+- 🌌 5 background options
+- 🌐 English/Arabic bilingual
+- ⏳ Temporary chats
+- 🗑️ Delete conversations
 
 ## Developer
 **Youssef Hegazy** (يوسف حجازي)

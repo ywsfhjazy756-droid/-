@@ -1,21 +1,21 @@
 /**
  * =============================================
- *  KAYRO AI v7.3 — ALL ISSUES FIXED
+ *  KAYRO AI v7.6 — CHAT MIXING FIX + STREAMING
  *  Developer: Youssef Hegazy
  *  
  *  FIXES:
- *  1. Instant response after login (no delay)
- *  2. Firestore saves ALL chats properly
- *  3. Each conversation shows its OWN messages only
- *  4. Settings/themes/preferences saved to cloud
- *  5. TTS stop button works
+ *  1. Chat messages NO LONGER mix between conversations
+ *  2. Streaming response (word by word display)
+ *  3. Action buttons always visible
+ *  4. Google Sign-in with redirect fallback
+ *  5. All features working
  * =============================================
  */
 
 // ==========================================
 //  FIREBASE CONFIG
 // ==========================================
-const firebaseConfig = {
+var firebaseConfig = {
   apiKey: "AIzaSyA0vKUkQ9M1c9sNPUqi4j7gdFFdGevZL8Y",
   authDomain: "kayro-ai.firebaseapp.com",
   projectId: "kayro-ai",
@@ -26,8 +26,8 @@ const firebaseConfig = {
 };
 
 firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
-const db = firebase.firestore();
+var auth = firebase.auth();
+var db = firebase.firestore();
 db.enablePersistence({ synchronizeTabs: true }).catch(function() {});
 
 // ==========================================
@@ -114,6 +114,7 @@ var i18n = {
     authErrorGeneric:"An error occurred. Please try again.",
     authErrorNetwork:"Network error. Check your connection.",
     copyMsg:"Copy message", editMsg:"Edit message",
+    authErrorUnauthorizedDomain:"Add this domain to Firebase Authorized Domains in Authentication settings.",
   },
   ar: {
     newChat:"محادثة جديدة", history:"السجل",
@@ -161,6 +162,7 @@ var i18n = {
     authErrorGeneric:"حدث خطأ. حاول مرة أخرى.",
     authErrorNetwork:"خطأ في الشبكة. تحقق من اتصالك.",
     copyMsg:"نسخ الرسالة", editMsg:"تعديل الرسالة",
+    authErrorUnauthorizedDomain:"أضف هذا الدومين في إعدادات Firebase Authentication → Authorized domains.",
   },
 };
 
@@ -176,7 +178,7 @@ var sampleConversations = {
     ]},
     { title:"Boost my productivity", messages:[
       { role:"user", text:"Give me strategies to be more productive." },
-      { role:"ai", text:"**🌅 Morning Protocol**\n• Wake at same time daily\n• No phone for 30 min\n\n**⚡ Deep Work**\n• **90-minute focus sprints**\n• Phone on DND\n\n**📋 Task Management**\n• **3 key tasks** daily max\n• **2-minute rule**: if quick, do it now" }
+      { role:"ai", text:"**Morning Protocol**\n• Wake at same time daily\n• No phone for 30 min\n\n**Deep Work**\n• **90-minute focus sprints**\n• Phone on DND\n\n**Task Management**\n• **3 key tasks** daily max\n• **2-minute rule**: if quick, do it now" }
     ]},
     { title:"Debug my code", messages:[
       { role:"user", text:"Help me find bugs:\n```javascript\nfunction sum(arr) {\n  let total;\n  for (let i = 0; i <= arr.length; i++) {\n    total += arr[i];\n  }\n  return total;\n}\n```" },
@@ -194,7 +196,7 @@ var sampleConversations = {
     ]},
     { title:"عزّز إنتاجيتي", messages:[
       { role:"user", text:"أعطني استراتيجيات للإنتاجية." },
-      { role:"ai", text:"**🌅 بروتوكول الصباح**\n• استيقظ بنفس الوقت\n• لا هاتف أول ٣٠ دقيقة\n\n**⚡ العمل العميق**\n• **جلسات ٩٠ دقيقة**\n• أوقف المشتتات" }
+      { role:"ai", text:"**بروتوكول الصباح**\n• استيقظ بنفس الوقت\n• لا هاتف أول ٣٠ دقيقة\n\n**العمل العميق**\n• **جلسات ٩٠ دقيقة**\n• أوقف المشتتات" }
     ]},
     { title:"صحّح الكود", messages:[
       { role:"user", text:"ساعدني في إيجاد الأخطاء:\n```javascript\nfunction sum(arr) {\n  let total;\n  for (let i = 0; i <= arr.length; i++) {\n    total += arr[i];\n  }\n  return total;\n}\n```" },
@@ -226,7 +228,7 @@ var syncDebounce = null;
 var appInitialized = false;
 
 // ==========================================
-//  BOOT — wait for DOM
+//  BOOT
 // ==========================================
 document.addEventListener("DOMContentLoaded", function() {
   initAuthUI();
@@ -234,7 +236,7 @@ document.addEventListener("DOMContentLoaded", function() {
 });
 
 // ==========================================
-//  AUTH LISTENER — FIX #1: instant response
+//  AUTH LISTENER
 // ==========================================
 function initAuthListener() {
   auth.onAuthStateChanged(function(user) {
@@ -243,32 +245,25 @@ function initAuthListener() {
 
     if (user) {
       currentUser = user;
-      // Show app IMMEDIATELY — don't wait for cloud data
+      // Show app IMMEDIATELY
       if (authScreen) authScreen.classList.add("hidden");
       if (appContainer) appContainer.classList.remove("hidden");
 
-      // Update user info immediately
       updateUserUI(user);
-
-      // Apply local settings immediately (from localStorage)
       applyTheme(currentTheme);
       applyBackground(currentBg);
       applyLanguage(currentLang);
       updateGreeting();
-
-      // Init app UI immediately
       initAppUI();
 
-      // Load cloud data in background — then refresh UI
+      // Load cloud data in background
       loadCloudData(user.uid).then(function() {
-        // After cloud data loads, refresh everything
         applyTheme(currentTheme);
         applyBackground(currentBg);
         applyLanguage(currentLang);
         updateGreeting();
         renderChatHistory();
         updateSettingsBtns();
-        // Update settings inputs if open
         var ni = document.getElementById("userNameInput");
         var ai = document.getElementById("userAgeInput");
         var ci = document.getElementById("customInstructionsInput");
@@ -302,18 +297,14 @@ function updateUserUI(user) {
   if (sn) sn.textContent = displayName;
   if (se) se.textContent = email;
   if (ae) ae.textContent = email;
-
-  var pd = user.providerData && user.providerData[0];
-  if (ap) ap.textContent = (pd && pd.providerId === "google.com") ? "Google" : "Email/Password";
-
-  if (sa) {
-    if (photoURL) {
-      sa.innerHTML = '<img src="' + photoURL + '" alt="avatar" />';
-    } else {
-      sa.textContent = displayName.charAt(0).toUpperCase();
-    }
+  if (ap) {
+    var pd = user.providerData && user.providerData[0];
+    ap.textContent = (pd && pd.providerId === "google.com") ? "Google" : "Email/Password";
   }
-
+  if (sa) {
+    if (photoURL) sa.innerHTML = '<img src="' + photoURL + '" alt="avatar" />';
+    else sa.textContent = displayName.charAt(0).toUpperCase();
+  }
   if (!userName) {
     userName = displayName;
     var ni = document.getElementById("userNameInput");
@@ -346,45 +337,54 @@ function initAuthUI() {
   if (loginEye) loginEye.onclick = function() { var i = document.getElementById("loginPassword"); if (i) i.type = i.type === "password" ? "text" : "password"; };
   if (registerEye) registerEye.onclick = function() { var i = document.getElementById("registerPassword"); if (i) i.type = i.type === "password" ? "text" : "password"; };
 
-  if (loginForm) loginForm.onsubmit = async function(e) {
+  if (loginForm) loginForm.onsubmit = function(e) {
     e.preventDefault(); clearAuthErrors();
     var email = document.getElementById("loginEmail").value.trim();
     var password = document.getElementById("loginPassword").value;
     var btn = document.getElementById("loginSubmit");
     btn.classList.add("loading"); btn.disabled = true;
-    try { await auth.signInWithEmailAndPassword(email, password); }
-    catch (err) { showAuthError("loginError", err.code); }
-    btn.classList.remove("loading"); btn.disabled = false;
+    auth.signInWithEmailAndPassword(email, password).catch(function(err) {
+      showAuthError("loginError", err.code);
+    }).finally(function() { btn.classList.remove("loading"); btn.disabled = false; });
   };
 
-  if (registerForm) registerForm.onsubmit = async function(e) {
+  if (registerForm) registerForm.onsubmit = function(e) {
     e.preventDefault(); clearAuthErrors();
     var name = document.getElementById("registerName").value.trim();
     var email = document.getElementById("registerEmail").value.trim();
     var password = document.getElementById("registerPassword").value;
     var btn = document.getElementById("registerSubmit");
     btn.classList.add("loading"); btn.disabled = true;
-    try {
-      var cred = await auth.createUserWithEmailAndPassword(email, password);
-      await cred.user.updateProfile({ displayName: name });
+    auth.createUserWithEmailAndPassword(email, password).then(function(cred) {
       userName = name;
-    } catch (err) { showAuthError("registerError", err.code); }
-    btn.classList.remove("loading"); btn.disabled = false;
+      return cred.user.updateProfile({ displayName: name });
+    }).catch(function(err) {
+      showAuthError("registerError", err.code);
+    }).finally(function() { btn.classList.remove("loading"); btn.disabled = false; });
   };
 
   var googleBtn = document.getElementById("googleSignIn");
-  if (googleBtn) googleBtn.onclick = async function() {
+  if (googleBtn) googleBtn.onclick = function() {
     var provider = new firebase.auth.GoogleAuthProvider();
     provider.setCustomParameters({ prompt: "select_account" });
-    try { await auth.signInWithPopup(provider); }
-    catch (err) {
-      if (err.code === "auth/popup-blocked") {
-        try { await auth.signInWithRedirect(provider); } catch (e2) { showAuthError("loginError", e2.code); }
-      } else if (err.code !== "auth/popup-closed-by-user" && err.code !== "auth/cancelled-popup-request") {
+    auth.signInWithPopup(provider).catch(function(err) {
+      console.log("Google sign-in error:", err.code, err.message);
+      if (err.code === "auth/popup-blocked" || err.code === "auth/popup-closed-by-user") {
+        auth.signInWithRedirect(provider);
+      } else if (err.code === "auth/cancelled-popup-request") {
+        // do nothing
+      } else if (err.code === "auth/unauthorized-domain") {
+        showAuthError("loginError", "auth/unauthorized-domain");
+      } else {
         showAuthError("loginError", err.code);
       }
-    }
+    });
   };
+  auth.getRedirectResult().catch(function(err) {
+    if (err.code && err.code !== "auth/popup-closed-by-user") {
+      showAuthError("loginError", err.code);
+    }
+  });
 
   var forgotBtn = document.getElementById("forgotBtn");
   var forgotCancel = document.getElementById("forgotCancel");
@@ -395,16 +395,16 @@ function initAuthUI() {
     if (fe && le) fe.value = le.value || "";
   };
   if (forgotCancel) forgotCancel.onclick = function() { var m = document.getElementById("forgotModal"); if (m) m.classList.add("hidden"); };
-  if (forgotSubmit) forgotSubmit.onclick = async function() {
+  if (forgotSubmit) forgotSubmit.onclick = function() {
     var ei = document.getElementById("forgotEmail"); var ee = document.getElementById("forgotError");
     if (!ei || !ei.value.trim()) return;
     forgotSubmit.classList.add("loading"); forgotSubmit.disabled = true;
-    try {
-      await auth.sendPasswordResetEmail(ei.value.trim());
+    auth.sendPasswordResetEmail(ei.value.trim()).then(function() {
       if (ee) { ee.textContent = i18n[currentLang].resetSent; ee.classList.add("success"); }
       setTimeout(function() { var m = document.getElementById("forgotModal"); if (m) m.classList.add("hidden"); if (ee) ee.classList.remove("success"); }, 3000);
-    } catch (err) { if (ee) { ee.classList.remove("success"); ee.textContent = getAuthErrorMsg(err.code); } }
-    forgotSubmit.classList.remove("loading"); forgotSubmit.disabled = false;
+    }).catch(function(err) {
+      if (ee) { ee.classList.remove("success"); ee.textContent = getAuthErrorMsg(err.code); }
+    }).finally(function() { forgotSubmit.classList.remove("loading"); forgotSubmit.disabled = false; });
   };
 
   var authLang = document.getElementById("authLangToggle");
@@ -426,17 +426,17 @@ function getAuthErrorMsg(code) {
     "auth/wrong-password": s.authErrorWrongPassword, "auth/invalid-credential": s.authErrorWrongPassword,
     "auth/user-not-found": s.authErrorUserNotFound, "auth/email-already-in-use": s.authErrorEmailInUse,
     "auth/network-request-failed": s.authErrorNetwork,
+    "auth/unauthorized-domain": s.authErrorUnauthorizedDomain,
     "auth/popup-closed-by-user": "", "auth/cancelled-popup-request": ""
   };
   return map[code] || s.authErrorGeneric;
 }
 
 // ==========================================
-//  CLOUD DATA — FIX #2: proper save/load
+//  CLOUD DATA
 // ==========================================
-async function loadCloudData(uid) {
-  try {
-    var doc = await db.collection("users").doc(uid).get();
+function loadCloudData(uid) {
+  return db.collection("users").doc(uid).get().then(function(doc) {
     if (doc.exists) {
       var data = doc.data();
       conversations = data.conversations || [];
@@ -450,62 +450,50 @@ async function loadCloudData(uid) {
       localStorage.setItem("kayro_theme", currentTheme);
       localStorage.setItem("kayro_bg", currentBg);
     } else {
-      // First time user — save initial data
-      await saveCloudDataNow();
+      saveCloudDataNow();
     }
-  } catch (err) {
+  }).catch(function(err) {
     console.error("Cloud load error:", err);
-    // Fallback to localStorage
     try { conversations = JSON.parse(localStorage.getItem("kayro_convs") || "[]"); } catch(e) { conversations = []; }
-  }
+  });
 }
 
-// Immediate save (no debounce)
-async function saveCloudDataNow() {
-  if (!currentUser) return;
-  try {
-    var cleanConvs = [];
-    for (var i = 0; i < conversations.length; i++) {
-      var c = conversations[i];
-      if (c.temp) continue;
-      var msgs = [];
-      for (var j = 0; j < c.messages.length; j++) {
-        var m = c.messages[j];
-        var cleaned = { role: m.role, text: m.text };
-        if (m.attachments) {
-          cleaned.attachments = [];
-          for (var k = 0; k < m.attachments.length; k++) {
-            var a = m.attachments[k];
-            cleaned.attachments.push({
-              name: a.name, type: a.type, isImage: a.isImage,
-              dataUrl: (a.dataUrl && a.dataUrl.length < 50000) ? a.dataUrl : null
-            });
-          }
+function saveCloudDataNow() {
+  if (!currentUser) return Promise.resolve();
+  var cleanConvs = [];
+  for (var i = 0; i < conversations.length; i++) {
+    var c = conversations[i];
+    if (c.temp) continue;
+    var msgs = [];
+    for (var j = 0; j < c.messages.length; j++) {
+      var m = c.messages[j];
+      var cleaned = { role: m.role, text: m.text };
+      if (m.attachments) {
+        cleaned.attachments = [];
+        for (var k = 0; k < m.attachments.length; k++) {
+          var a = m.attachments[k];
+          cleaned.attachments.push({
+            name: a.name, type: a.type, isImage: a.isImage,
+            dataUrl: (a.dataUrl && a.dataUrl.length < 50000) ? a.dataUrl : null
+          });
         }
-        msgs.push(cleaned);
       }
-      cleanConvs.push({ id: c.id, title: c.title, messages: msgs });
+      msgs.push(cleaned);
     }
-    await db.collection("users").doc(currentUser.uid).set({
-      conversations: cleanConvs,
-      userName: userName, userAge: userAge,
-      customInstructions: customInstructions,
-      lang: currentLang, theme: currentTheme, bg: currentBg,
-      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-    }, { merge: true });
-  } catch (err) { console.error("Save error:", err); }
-  // Also save to localStorage as backup
-  try {
-    var localConvs = conversations.filter(function(c) { return !c.temp; });
-    localStorage.setItem("kayro_convs", JSON.stringify(localConvs));
-  } catch(e) {}
+    cleanConvs.push({ id: c.id, title: c.title, messages: msgs });
+  }
+  return db.collection("users").doc(currentUser.uid).set({
+    conversations: cleanConvs,
+    userName: userName, userAge: userAge,
+    customInstructions: customInstructions,
+    lang: currentLang, theme: currentTheme, bg: currentBg,
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+  }, { merge: true }).catch(function(err) { console.error("Save error:", err); });
 }
 
-// Debounced save
 function saveCloudData() {
   clearTimeout(syncDebounce);
   syncDebounce = setTimeout(function() { saveCloudDataNow(); }, 800);
-  // Always save to localStorage immediately
   try {
     var localConvs = conversations.filter(function(c) { return !c.temp; });
     localStorage.setItem("kayro_convs", JSON.stringify(localConvs));
@@ -513,36 +501,28 @@ function saveCloudData() {
 }
 
 // ==========================================
-//  APP UI — bind events once
+//  APP UI — BIND EVENTS ONCE
 // ==========================================
 function initAppUI() {
   if (appInitialized) return;
   appInitialized = true;
 
   // Sidebar
-  var sidebarOpen = document.getElementById("sidebarOpen");
-  var sidebarClose = document.getElementById("sidebarClose");
-  var overlay = document.getElementById("overlay");
-  if (sidebarOpen) sidebarOpen.onclick = function() {
-    var s = document.getElementById("sidebar"); if (s) s.classList.add("open");
-    var o = document.getElementById("overlay"); if (o) o.classList.add("active");
+  document.getElementById("sidebarOpen").onclick = function() {
+    document.getElementById("sidebar").classList.add("open");
+    document.getElementById("overlay").classList.add("active");
   };
-  if (sidebarClose) sidebarClose.onclick = closeSidebar;
-  if (overlay) overlay.onclick = closeSidebar;
+  document.getElementById("sidebarClose").onclick = closeSidebar;
+  document.getElementById("overlay").onclick = closeSidebar;
 
   // Logo & New Chat
-  var logoBtn = document.getElementById("logoBtn");
-  var newChatBtn = document.getElementById("newChatBtn");
-  var tempChatBtn = document.getElementById("tempChatBtn");
-  var tempBannerClose = document.getElementById("tempBannerClose");
-  if (logoBtn) logoBtn.onclick = function() { startNewChat(); closeSidebar(); };
-  if (newChatBtn) newChatBtn.onclick = function() { startNewChat(); closeSidebar(); };
-  if (tempChatBtn) tempChatBtn.onclick = function() { startTempChat(); closeSidebar(); };
-  if (tempBannerClose) tempBannerClose.onclick = endTempChat;
+  document.getElementById("logoBtn").onclick = function() { startNewChat(); closeSidebar(); };
+  document.getElementById("newChatBtn").onclick = function() { startNewChat(); closeSidebar(); };
+  document.getElementById("tempChatBtn").onclick = function() { startTempChat(); closeSidebar(); };
+  document.getElementById("tempBannerClose").onclick = endTempChat;
 
   // Language toggle sidebar
-  var langToggle = document.getElementById("langToggle");
-  if (langToggle) langToggle.onclick = function() {
+  document.getElementById("langToggle").onclick = function() {
     currentLang = currentLang === "en" ? "ar" : "en";
     localStorage.setItem("kayro_lang", currentLang);
     applyLanguage(currentLang); updateGreeting(); saveCloudData();
@@ -554,40 +534,30 @@ function initAppUI() {
   });
 
   // Send
-  var sendBtn = document.getElementById("sendBtn");
+  document.getElementById("sendBtn").onclick = handleSend;
   var userInput = document.getElementById("userInput");
-  if (sendBtn) sendBtn.onclick = handleSend;
-  if (userInput) {
-    userInput.oninput = function() {
-      var sb = document.getElementById("sendBtn");
-      if (sb) sb.disabled = userInput.value.trim() === "" && pendingFiles.length === 0;
-      autoResize(userInput);
-    };
-    userInput.onkeydown = function(e) {
-      if (e.key === "Enter" && !e.shiftKey) {
-        e.preventDefault();
-        if (userInput.value.trim() || pendingFiles.length > 0) handleSend();
-      }
-    };
-  }
+  userInput.oninput = function() {
+    document.getElementById("sendBtn").disabled = userInput.value.trim() === "" && pendingFiles.length === 0;
+    autoResize(userInput);
+  };
+  userInput.onkeydown = function(e) {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      if (userInput.value.trim() || pendingFiles.length > 0) handleSend();
+    }
+  };
 
   // Attach
-  var attachBtn = document.getElementById("attachBtn");
-  var fileInput = document.getElementById("fileInput");
-  if (attachBtn) attachBtn.onclick = function() { if (fileInput) fileInput.click(); };
-  if (fileInput) fileInput.onchange = handleFileSelect;
+  document.getElementById("attachBtn").onclick = function() { document.getElementById("fileInput").click(); };
+  document.getElementById("fileInput").onchange = handleFileSelect;
 
   // Mic
-  var micBtn = document.getElementById("micBtn");
-  if (micBtn) micBtn.onclick = toggleVoiceInput;
+  document.getElementById("micBtn").onclick = toggleVoiceInput;
 
   // Settings
-  var settingsBtn = document.getElementById("settingsBtn");
-  var settingsClose = document.getElementById("settingsClose");
-  var settingsOverlay = document.getElementById("settingsOverlay");
-  if (settingsBtn) settingsBtn.onclick = function() { openSettings(); closeSidebar(); };
-  if (settingsClose) settingsClose.onclick = closeSettings;
-  if (settingsOverlay) settingsOverlay.onclick = function(e) { if (e.target === settingsOverlay) closeSettings(); };
+  document.getElementById("settingsBtn").onclick = function() { openSettings(); closeSidebar(); };
+  document.getElementById("settingsClose").onclick = closeSettings;
+  document.getElementById("settingsOverlay").onclick = function(e) { if (e.target === document.getElementById("settingsOverlay")) closeSettings(); };
 
   // Settings inputs
   var userNameInput = document.getElementById("userNameInput");
@@ -598,16 +568,12 @@ function initAppUI() {
   if (customInstructionsInput) { customInstructionsInput.value = customInstructions; customInstructionsInput.onchange = saveSettingsFromInputs; }
 
   // Language settings buttons
-  var langEn = document.getElementById("langEn");
-  var langAr = document.getElementById("langAr");
-  if (langEn) langEn.onclick = function() { currentLang = "en"; localStorage.setItem("kayro_lang", "en"); applyLanguage("en"); updateGreeting(); updateSettingsBtns(); saveCloudData(); };
-  if (langAr) langAr.onclick = function() { currentLang = "ar"; localStorage.setItem("kayro_lang", "ar"); applyLanguage("ar"); updateGreeting(); updateSettingsBtns(); saveCloudData(); };
+  document.getElementById("langEn").onclick = function() { currentLang = "en"; localStorage.setItem("kayro_lang", "en"); applyLanguage("en"); updateGreeting(); updateSettingsBtns(); saveCloudData(); };
+  document.getElementById("langAr").onclick = function() { currentLang = "ar"; localStorage.setItem("kayro_lang", "ar"); applyLanguage("ar"); updateGreeting(); updateSettingsBtns(); saveCloudData(); };
 
   // Theme buttons
-  var themeDark = document.getElementById("themeDark");
-  var themeLight = document.getElementById("themeLight");
-  if (themeDark) themeDark.onclick = function() { applyTheme("dark"); updateSettingsBtns(); saveCloudData(); };
-  if (themeLight) themeLight.onclick = function() { applyTheme("light"); updateSettingsBtns(); saveCloudData(); };
+  document.getElementById("themeDark").onclick = function() { applyTheme("dark"); updateSettingsBtns(); saveCloudData(); };
+  document.getElementById("themeLight").onclick = function() { applyTheme("light"); updateSettingsBtns(); saveCloudData(); };
 
   // Background options
   document.querySelectorAll("#bgOptions .bg-option").forEach(function(btn) {
@@ -615,36 +581,25 @@ function initAppUI() {
   });
 
   // Delete all
-  var deleteAllBtn = document.getElementById("deleteAllChatsBtn");
-  var clearAllBtn = document.getElementById("clearAllBtn");
-  if (deleteAllBtn) deleteAllBtn.onclick = confirmDeleteAll;
-  if (clearAllBtn) clearAllBtn.onclick = function() { if (conversations.length) confirmDeleteAll(); };
+  document.getElementById("deleteAllChatsBtn").onclick = confirmDeleteAll;
+  document.getElementById("clearAllBtn").onclick = function() { if (conversations.length) confirmDeleteAll(); };
 
   // Logout
-  var logoutBtn = document.getElementById("logoutBtn");
-  var signOutSettingsBtn = document.getElementById("signOutSettingsBtn");
-  if (logoutBtn) logoutBtn.onclick = handleLogout;
-  if (signOutSettingsBtn) signOutSettingsBtn.onclick = function() { closeSettings(); handleLogout(); };
+  document.getElementById("logoutBtn").onclick = handleLogout;
+  document.getElementById("signOutSettingsBtn").onclick = function() { closeSettings(); handleLogout(); };
 
   // Confirm dialog
-  var confirmCancel = document.getElementById("confirmCancel");
-  var confirmOk = document.getElementById("confirmOk");
-  var confirmOverlay = document.getElementById("confirmOverlay");
-  if (confirmCancel) confirmCancel.onclick = closeConfirm;
-  if (confirmOk) confirmOk.onclick = function() { if (confirmCallback) confirmCallback(); closeConfirm(); };
-  if (confirmOverlay) confirmOverlay.onclick = function(e) { if (e.target === confirmOverlay) closeConfirm(); };
+  document.getElementById("confirmCancel").onclick = closeConfirm;
+  document.getElementById("confirmOk").onclick = function() { if (confirmCallback) confirmCallback(); closeConfirm(); };
+  document.getElementById("confirmOverlay").onclick = function(e) { if (e.target === document.getElementById("confirmOverlay")) closeConfirm(); };
 
   // Image viewer
-  var ivClose = document.getElementById("ivClose");
-  var imageViewer = document.getElementById("imageViewer");
-  var ivDownload = document.getElementById("ivDownload");
-  if (ivClose) ivClose.onclick = closeImageViewer;
-  if (imageViewer) imageViewer.onclick = function(e) { if (e.target === imageViewer) closeImageViewer(); };
-  if (ivDownload) ivDownload.onclick = downloadCurrentImage;
+  document.getElementById("ivClose").onclick = closeImageViewer;
+  document.getElementById("imageViewer").onclick = function(e) { if (e.target === document.getElementById("imageViewer")) closeImageViewer(); };
+  document.getElementById("ivDownload").onclick = downloadCurrentImage;
 
   // Click images in chat
-  var chatMessages = document.getElementById("chatMessages");
-  if (chatMessages) chatMessages.onclick = function(e) {
+  document.getElementById("chatMessages").onclick = function(e) {
     if (e.target.classList.contains("msg-img") || e.target.classList.contains("ai-generated-img")) {
       openImageViewer(e.target.src);
     }
@@ -655,12 +610,12 @@ function initAppUI() {
 }
 
 function closeSidebar() {
-  var s = document.getElementById("sidebar"); if (s) s.classList.remove("open");
-  var o = document.getElementById("overlay"); if (o) o.classList.remove("active");
+  document.getElementById("sidebar").classList.remove("open");
+  document.getElementById("overlay").classList.remove("active");
 }
 
 // ==========================================
-//  THEME & BACKGROUND — FIX #4: saved to cloud
+//  THEME & BACKGROUND
 // ==========================================
 function applyTheme(t) {
   currentTheme = t;
@@ -668,7 +623,6 @@ function applyTheme(t) {
   localStorage.setItem("kayro_theme", t);
   if (t === "light" && currentBg === "stars") applyBackground("white");
 }
-
 function applyBackground(b) {
   currentBg = b;
   document.body.setAttribute("data-bg", b);
@@ -701,7 +655,7 @@ function applyLanguage(lang) {
 
   updateSettingsBtns();
 
-  // FIX #3: only re-render current conversation's messages
+  // Re-render current conversation messages to update labels
   if (activeConversationId !== null) {
     var conv = getActiveConversation();
     if (conv) renderMessages(conv.messages);
@@ -738,15 +692,11 @@ function openSettings() {
   if (ai) ai.value = userAge;
   if (ci) ci.value = customInstructions;
   updateSettingsBtns();
-  var so = document.getElementById("settingsOverlay");
-  if (so) so.classList.add("active");
+  document.getElementById("settingsOverlay").classList.add("active");
 }
-
 function closeSettings() {
-  var so = document.getElementById("settingsOverlay");
-  if (so) so.classList.remove("active");
+  document.getElementById("settingsOverlay").classList.remove("active");
 }
-
 function saveSettingsFromInputs() {
   var ni = document.getElementById("userNameInput");
   var ai = document.getElementById("userAgeInput");
@@ -754,8 +704,7 @@ function saveSettingsFromInputs() {
   userName = ni ? ni.value.trim() : "";
   userAge = ai ? ai.value.trim() : "";
   customInstructions = ci ? ci.value.trim() : "";
-  updateGreeting();
-  saveCloudData();
+  updateGreeting(); saveCloudData();
   showToast(i18n[currentLang].nameSaved);
 }
 
@@ -763,17 +712,13 @@ function saveSettingsFromInputs() {
 //  CONFIRM / IMAGE VIEWER / TOAST
 // ==========================================
 function showConfirm(title, text, cb) {
-  var ct = document.getElementById("confirmTitle");
-  var cx = document.getElementById("confirmText");
-  var co = document.getElementById("confirmOverlay");
-  if (ct) ct.textContent = title;
-  if (cx) cx.textContent = text;
+  document.getElementById("confirmTitle").textContent = title;
+  document.getElementById("confirmText").textContent = text;
   confirmCallback = cb;
-  if (co) co.classList.add("active");
+  document.getElementById("confirmOverlay").classList.add("active");
 }
 function closeConfirm() {
-  var co = document.getElementById("confirmOverlay");
-  if (co) co.classList.remove("active");
+  document.getElementById("confirmOverlay").classList.remove("active");
   confirmCallback = null;
 }
 function confirmDeleteAll() {
@@ -785,15 +730,15 @@ function confirmDeleteAll() {
 }
 
 function openImageViewer(src) {
-  var img = document.getElementById("ivImage"); if (img) img.src = src;
-  var iv = document.getElementById("imageViewer"); if (iv) iv.classList.add("active");
+  document.getElementById("ivImage").src = src;
+  document.getElementById("imageViewer").classList.add("active");
 }
 function closeImageViewer() {
-  var iv = document.getElementById("imageViewer"); if (iv) iv.classList.remove("active");
-  var img = document.getElementById("ivImage"); if (img) img.src = "";
+  document.getElementById("imageViewer").classList.remove("active");
+  document.getElementById("ivImage").src = "";
 }
 function downloadCurrentImage() {
-  var img = document.getElementById("ivImage"); var src = img ? img.src : "";
+  var src = document.getElementById("ivImage").src;
   if (!src) return;
   showToast(i18n[currentLang].downloading);
   fetch(src).then(function(r) { return r.blob(); }).then(function(blob) {
@@ -824,36 +769,32 @@ function initSpeechRecognition() {
     for (var i = e.resultIndex; i < e.results.length; i++) t += e.results[i][0].transcript;
     var ui = document.getElementById("userInput");
     if (ui) { ui.value = t; autoResize(ui); }
-    var sb = document.getElementById("sendBtn");
-    if (sb) sb.disabled = t.trim() === "";
+    document.getElementById("sendBtn").disabled = t.trim() === "";
   };
-  recognition.onend = function() { isRecording = false; var mb = document.getElementById("micBtn"); if (mb) mb.classList.remove("recording"); };
-  recognition.onerror = function() { isRecording = false; var mb = document.getElementById("micBtn"); if (mb) mb.classList.remove("recording"); };
+  recognition.onend = function() { isRecording = false; document.getElementById("micBtn").classList.remove("recording"); };
+  recognition.onerror = function() { isRecording = false; document.getElementById("micBtn").classList.remove("recording"); };
 }
 
 function toggleVoiceInput() {
   if (!recognition) { showToast(i18n[currentLang].voiceNotSupported); return; }
   var mb = document.getElementById("micBtn");
-  if (isRecording) { recognition.stop(); isRecording = false; if (mb) mb.classList.remove("recording"); }
+  if (isRecording) { recognition.stop(); isRecording = false; mb.classList.remove("recording"); }
   else {
     recognition.lang = currentLang === "ar" ? "ar-SA" : "en-US";
-    try { recognition.start(); isRecording = true; if (mb) mb.classList.add("recording"); } catch(e) {}
+    try { recognition.start(); isRecording = true; mb.classList.add("recording"); } catch(e) {}
   }
 }
 
 // ==========================================
-//  TTS — FIX #5: proper stop
+//  TTS
 // ==========================================
 function speakText(text, btn) {
-  // If already speaking, stop
   if (currentTTS) {
     window.speechSynthesis.cancel();
     currentTTS = null;
     document.querySelectorAll(".tts-btn.playing, .msg-action-btn.playing").forEach(function(b) { b.classList.remove("playing"); });
-    // If clicking same button, just stop
     if (btn._isPlaying) { btn._isPlaying = false; return; }
   }
-
   var clean = text.replace(/```[\s\S]*?```/g, "code block").replace(/\*\*(.*?)\*\*/g, "$1").replace(/\*(.*?)\*/g, "$1").replace(/`(.*?)`/g, "$1").replace(/\n+/g, ". ");
   var u = new SpeechSynthesisUtterance(clean);
   u.lang = currentLang === "ar" ? "ar-SA" : "en-US";
@@ -866,7 +807,7 @@ function speakText(text, btn) {
 }
 
 // ==========================================
-//  CONVERSATIONS — FIX #3: separate messages
+//  CONVERSATIONS
 // ==========================================
 function getActiveConversation() {
   if (activeConversationId === null) return null;
@@ -881,10 +822,8 @@ function startTempChat() {
   var id = Date.now();
   conversations.push({ id: id, title: currentLang === "ar" ? "محادثة مؤقتة" : "Temporary Chat", messages: [], temp: true });
   activeConversationId = id;
-  showChatArea();
-  renderMessages([]); // Clear and show empty
-  renderChatHistory();
-  var tb = document.getElementById("tempBanner"); if (tb) tb.classList.add("active");
+  showChatArea(); renderMessages([]); renderChatHistory();
+  document.getElementById("tempBanner").classList.add("active");
 }
 
 function endTempChat() {
@@ -892,7 +831,7 @@ function endTempChat() {
     conversations = conversations.filter(function(c) { return c.id !== activeConversationId; });
   }
   isTempMode = false; activeConversationId = null;
-  var tb = document.getElementById("tempBanner"); if (tb) tb.classList.remove("active");
+  document.getElementById("tempBanner").classList.remove("active");
   showWelcomeScreen(); renderChatHistory(); saveCloudData();
 }
 
@@ -901,22 +840,21 @@ function startNewChat() {
     conversations = conversations.filter(function(c) { return c.id !== activeConversationId; });
   }
   isTempMode = false; activeConversationId = null;
-  var tb = document.getElementById("tempBanner"); if (tb) tb.classList.remove("active");
+  document.getElementById("tempBanner").classList.remove("active");
   pendingFiles = []; renderFilePreview();
   showWelcomeScreen();
-  var ui = document.getElementById("userInput"); if (ui) ui.value = "";
-  var sb = document.getElementById("sendBtn"); if (sb) sb.disabled = true;
+  document.getElementById("userInput").value = "";
+  document.getElementById("sendBtn").disabled = true;
   renderChatHistory();
 }
 
 function showWelcomeScreen() {
-  var ws = document.getElementById("welcomeScreen"); if (ws) ws.classList.remove("hidden");
-  var ca = document.getElementById("chatArea"); if (ca) ca.classList.remove("active");
+  document.getElementById("welcomeScreen").classList.remove("hidden");
+  document.getElementById("chatArea").classList.remove("active");
 }
-
 function showChatArea() {
-  var ws = document.getElementById("welcomeScreen"); if (ws) ws.classList.add("hidden");
-  var ca = document.getElementById("chatArea"); if (ca) ca.classList.add("active");
+  document.getElementById("welcomeScreen").classList.add("hidden");
+  document.getElementById("chatArea").classList.add("active");
 }
 
 function loadSampleConversation(index) {
@@ -924,7 +862,6 @@ function loadSampleConversation(index) {
   if (!samples || !samples[index]) return;
   var sample = samples[index];
   var id = Date.now();
-  // Create NEW conversation with copied messages
   var conv = { id: id, title: sample.title, messages: [] };
   for (var i = 0; i < sample.messages.length; i++) {
     conv.messages.push({ role: sample.messages[i].role, text: sample.messages[i].text });
@@ -932,12 +869,9 @@ function loadSampleConversation(index) {
   conversations.push(conv);
   activeConversationId = id;
   isTempMode = false;
-  var tb = document.getElementById("tempBanner"); if (tb) tb.classList.remove("active");
-  showChatArea();
-  renderMessages(conv.messages); // Only THIS conversation's messages
-  renderChatHistory();
-  closeSidebar();
-  saveCloudData();
+  document.getElementById("tempBanner").classList.remove("active");
+  showChatArea(); renderMessages(conv.messages); renderChatHistory();
+  closeSidebar(); saveCloudData();
 }
 
 // ==========================================
@@ -953,7 +887,7 @@ function handleFileSelect(e) {
       reader.onload = function(ev) {
         pendingFiles.push({ name: file.name, type: file.type, dataUrl: ev.target.result, isImage: isImage });
         renderFilePreview();
-        var sb = document.getElementById("sendBtn"); if (sb) sb.disabled = false;
+        document.getElementById("sendBtn").disabled = false;
       };
       reader.readAsDataURL(file);
     })(files[i]);
@@ -963,7 +897,6 @@ function handleFileSelect(e) {
 
 function renderFilePreview() {
   var area = document.getElementById("filePreviewArea");
-  if (!area) return;
   area.innerHTML = "";
   if (pendingFiles.length === 0) { area.classList.remove("has-files"); return; }
   area.classList.add("has-files");
@@ -974,9 +907,8 @@ function renderFilePreview() {
       item.innerHTML = thumb + '<span class="file-preview-name">' + (f.isImage ? "" : "📄 ") + escapeHTML(f.name) + '</span><button class="file-preview-remove">✕</button>';
       item.querySelector(".file-preview-remove").onclick = function() {
         pendingFiles.splice(idx, 1); renderFilePreview();
-        var sb = document.getElementById("sendBtn");
         var ui = document.getElementById("userInput");
-        if (sb && ui) sb.disabled = ui.value.trim() === "" && pendingFiles.length === 0;
+        document.getElementById("sendBtn").disabled = ui.value.trim() === "" && pendingFiles.length === 0;
       };
       area.appendChild(item);
     })(pendingFiles[i], i);
@@ -987,34 +919,28 @@ function renderFilePreview() {
 //  LOGOUT
 // ==========================================
 function handleLogout() {
-  showConfirm(i18n[currentLang].confirmTitle, i18n[currentLang].signOutConfirm, async function() {
-    try {
-      // Stop any TTS
-      if (currentTTS) { window.speechSynthesis.cancel(); currentTTS = null; }
-      await auth.signOut();
+  showConfirm(i18n[currentLang].confirmTitle, i18n[currentLang].signOutConfirm, function() {
+    if (currentTTS) { window.speechSynthesis.cancel(); currentTTS = null; }
+    auth.signOut().then(function() {
       conversations = []; activeConversationId = null; isTempMode = false;
-      var tb = document.getElementById("tempBanner"); if (tb) tb.classList.remove("active");
+      document.getElementById("tempBanner").classList.remove("active");
       appInitialized = false;
-    } catch (err) { console.error("Logout error:", err); }
+    });
   });
 }
 
 // ==========================================
-//  CHAT HISTORY — FIX #3: clicking loads ONLY that conversation
+//  CHAT HISTORY
 // ==========================================
 function renderChatHistory() {
   var ch = document.getElementById("chatHistory");
-  if (!ch) return;
   ch.innerHTML = "";
-
-  // Temp first, then non-temp reversed
   var temps = [], normals = [];
   for (var i = 0; i < conversations.length; i++) {
     if (conversations[i].temp) temps.push(conversations[i]);
     else normals.push(conversations[i]);
   }
   var all = temps.reverse().concat(normals.reverse());
-
   for (var j = 0; j < all.length; j++) {
     (function(conv) {
       var btn = document.createElement("button");
@@ -1023,47 +949,37 @@ function renderChatHistory() {
       var badge = conv.temp ? '<span class="history-temp-badge">' + i18n[currentLang].tempLabel + '</span>' : "";
       var del = '<button class="history-delete"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><line x1="3" y1="3" x2="9" y2="9" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><line x1="9" y1="3" x2="3" y2="9" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></button>';
       btn.innerHTML = icon + '<span class="history-title">' + escapeHTML(conv.title) + '</span>' + badge + del;
-
       btn.onclick = function(e) {
         if (e.target.closest(".history-delete")) return;
-        // FIX #3: Switch to THIS conversation and show ONLY its messages
         activeConversationId = conv.id;
         isTempMode = !!conv.temp;
-        var tb = document.getElementById("tempBanner");
-        if (tb) tb.classList.toggle("active", isTempMode);
-        showChatArea();
-        renderMessages(conv.messages); // Only THIS conversation's messages
-        renderChatHistory();
-        closeSidebar();
+        document.getElementById("tempBanner").classList.toggle("active", isTempMode);
+        showChatArea(); renderMessages(conv.messages); renderChatHistory(); closeSidebar();
       };
-
       btn.querySelector(".history-delete").onclick = function(e) {
         e.stopPropagation();
         showConfirm(i18n[currentLang].confirmTitle, i18n[currentLang].confirmDeleteOne, function() {
           conversations = conversations.filter(function(c) { return c.id !== conv.id; });
           if (activeConversationId === conv.id) {
             activeConversationId = null; isTempMode = false;
-            var tb = document.getElementById("tempBanner"); if (tb) tb.classList.remove("active");
+            document.getElementById("tempBanner").classList.remove("active");
             showWelcomeScreen();
           }
           renderChatHistory(); saveCloudData(); showToast(i18n[currentLang].deletedToast);
         });
       };
-
       ch.appendChild(btn);
     })(all[j]);
   }
 }
 
 // ==========================================
-//  MESSAGE RENDERING — FIX #3: clear before render
+//  MESSAGE RENDERING
 // ==========================================
 function renderMessages(messages) {
   var cm = document.getElementById("chatMessages");
-  if (!cm) return;
-  // CLEAR everything first
+  // ★ CRITICAL FIX: Always clear ALL old messages first
   cm.innerHTML = "";
-  // Only render messages from the current conversation
   for (var i = 0; i < messages.length; i++) {
     appendMessage(messages[i].role, messages[i].text, messages[i].attachments, false, i);
   }
@@ -1074,7 +990,6 @@ function appendMessage(role, text, attachments, animate, msgIndex) {
   if (animate === undefined) animate = true;
   if (msgIndex === undefined) msgIndex = -1;
   var cm = document.getElementById("chatMessages");
-  if (!cm) return;
   var s = i18n[currentLang];
   var el = document.createElement("div");
   el.className = "message " + (role === "user" ? "user-msg" : "ai-msg");
@@ -1138,11 +1053,10 @@ function bindMsgActions(el) {
       var conv = getActiveConversation();
       if (!conv || !conv.messages[idx]) return;
       var ui = document.getElementById("userInput");
-      if (ui) { ui.value = conv.messages[idx].text; autoResize(ui); ui.focus(); }
-      var sb = document.getElementById("sendBtn"); if (sb) sb.disabled = false;
+      ui.value = conv.messages[idx].text; autoResize(ui); ui.focus();
+      document.getElementById("sendBtn").disabled = false;
       conv.messages = conv.messages.slice(0, idx);
-      renderMessages(conv.messages);
-      saveCloudData();
+      renderMessages(conv.messages); saveCloudData();
     };
   });
   el.querySelectorAll(".code-copy-btn").forEach(function(btn) {
@@ -1151,7 +1065,7 @@ function bindMsgActions(el) {
 }
 
 function showTypingIndicator() {
-  var cm = document.getElementById("chatMessages"); if (!cm) return;
+  var cm = document.getElementById("chatMessages");
   var el = document.createElement("div");
   el.className = "message ai-msg"; el.id = "typingIndicator";
   el.innerHTML = '<div class="msg-avatar ai">K</div><div class="msg-bubble"><span class="msg-sender">' + escapeHTML(i18n[currentLang].kayro) + '</span><div class="typing-dots"><div class="t-dot"></div><div class="t-dot"></div><div class="t-dot"></div></div></div>';
@@ -1168,16 +1082,19 @@ function removeTypingIndicator() {
 function handleSend() {
   if (isGenerating) return;
   var ui = document.getElementById("userInput");
-  var text = ui ? ui.value.trim() : "";
+  var text = ui.value.trim();
   var attachments = pendingFiles.slice();
   if (!text && attachments.length === 0) return;
 
-  // Create new conversation if needed
+  // ★ CRITICAL FIX: When creating a NEW conversation, clear old messages from DOM
   if (activeConversationId === null) {
     var id = Date.now();
     var title = text ? (text.length > 40 ? text.substring(0, 40) + "…" : text) : "File attachment";
     conversations.push({ id: id, title: title, messages: [] });
     activeConversationId = id;
+    // ★ Clear the chat area DOM before showing new conversation
+    var cm = document.getElementById("chatMessages");
+    if (cm) cm.innerHTML = "";
     showChatArea();
   }
 
@@ -1189,10 +1106,10 @@ function handleSend() {
   conv.messages.push(msgObj);
   appendMessage("user", text, attachments, true, conv.messages.length - 1);
 
-  if (ui) ui.value = "";
+  ui.value = "";
   pendingFiles = []; renderFilePreview();
-  var sb = document.getElementById("sendBtn"); if (sb) sb.disabled = true;
-  if (ui) autoResize(ui);
+  document.getElementById("sendBtn").disabled = true;
+  autoResize(ui);
   saveCloudData(); renderChatHistory();
 
   if (isImageRequest(text)) generateImage(text, conv);
@@ -1209,61 +1126,64 @@ function isImageRequest(text) {
     /^(ارسم|صمم|اصنع|ولّد|انشئ|أنشئ)/i.test(t);
 }
 
-async function generateImage(prompt, conv) {
+function generateImage(prompt, conv) {
   isGenerating = true;
   var cm = document.getElementById("chatMessages");
   var s = i18n[currentLang];
   var loadingEl = document.createElement("div");
   loadingEl.className = "message ai-msg"; loadingEl.id = "imgLoading";
   loadingEl.innerHTML = '<div class="msg-avatar ai">K</div><div class="msg-bubble"><span class="msg-sender">' + escapeHTML(s.kayro) + '</span><div class="img-loading"><div class="spinner"></div><span>' + s.generatingImage + '</span></div></div>';
-  if (cm) cm.appendChild(loadingEl);
-  scrollToBottom();
+  cm.appendChild(loadingEl); scrollToBottom();
 
-  try {
-    var imagePrompt = prompt.replace(/^(ارسم|صمم|اصنع|ولّد|أنشئ|انشئ|draw|paint|generate|create|make|design|sketch)\s*/i, '').replace(/^(me\s+|لي\s+)?/i, '').replace(/^(a |an |the )?(image|picture|photo|illustration|صورة|رسمة|لوحة)\s*(of |for |about |عن |ل)?/i, '').trim() || prompt;
-    var imageUrl = "https://image.pollinations.ai/prompt/" + encodeURIComponent(imagePrompt) + "?width=768&height=768&nologo=true&seed=" + Date.now();
-    var img = new Image(); img.crossOrigin = "anonymous";
-    await new Promise(function(resolve, reject) { img.onload = resolve; img.onerror = reject; img.src = imageUrl; setTimeout(function() { reject(new Error("timeout")); }, 30000); });
+  var imagePrompt = prompt.replace(/^(ارسم|صمم|اصنع|ولّد|أنشئ|انشئ|draw|paint|generate|create|make|design|sketch)\s*/i, '').replace(/^(me\s+|لي\s+)?/i, '').replace(/^(a |an |the )?(image|picture|photo|illustration|صورة|رسمة|لوحة)\s*(of |for |about |عن |ل)?/i, '').trim() || prompt;
+  var imageUrl = "https://image.pollinations.ai/prompt/" + encodeURIComponent(imagePrompt) + "?width=768&height=768&nologo=true&seed=" + Date.now();
+  var img = new Image(); img.crossOrigin = "anonymous";
+  img.onload = function() {
     var le = document.getElementById("imgLoading"); if (le) le.remove();
     var aiText = currentLang === "ar" ? "تفضل، هذي الصورة! 🎨" : "Here's the image you requested! 🎨";
     var el = document.createElement("div"); el.className = "message ai-msg";
     el.innerHTML = '<div class="msg-avatar ai">K</div><div class="msg-bubble"><span class="msg-sender">' + escapeHTML(s.kayro) + '</span><div class="msg-body">' + formatText(aiText) + '</div><img class="ai-generated-img" src="' + imageUrl + '" alt="Generated" /></div>';
-    if (cm) cm.appendChild(el); scrollToBottom();
+    cm.appendChild(el); scrollToBottom();
     conv.messages.push({ role: "ai", text: aiText }); saveCloudData();
-  } catch (err) {
-    var le2 = document.getElementById("imgLoading"); if (le2) le2.remove();
+    isGenerating = false;
+  };
+  img.onerror = function() {
+    var le = document.getElementById("imgLoading"); if (le) le.remove();
     var errText = currentLang === "ar" ? "عذرًا، حصل خطأ أثناء إنشاء الصورة." : "Sorry, error generating the image.";
     appendMessage("ai", errText);
     conv.messages.push({ role: "ai", text: errText }); saveCloudData();
-  }
-  isGenerating = false;
+    isGenerating = false;
+  };
+  img.src = imageUrl;
+  setTimeout(function() { if (isGenerating) { img.onerror(); } }, 30000);
 }
 
 // ==========================================
 //  AI API — OpenRouter (DeepSeek V3)
 // ==========================================
-var OPENROUTER_API_KEY = "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";
+var OPENROUTER_API_KEY = "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";
 var OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 var OPENROUTER_MODEL = "deepseek/deepseek-chat-v3-0324";
 
-async function getAIResponse(userMessage, attachments, conv) {
+function getAIResponse(userMessage, attachments, conv) {
   isGenerating = true;
   showTypingIndicator();
-  try {
-    var aiText = await callOpenRouterAPI(userMessage, attachments, conv);
+
+  callOpenRouterAPI(userMessage, attachments, conv).then(function(aiText) {
     removeTypingIndicator();
+    // ★ NEW: Streaming display instead of instant
     appendMessageStreaming("ai", aiText, conv);
-  } catch (error) {
+  }).catch(function(error) {
     console.error("API error:", error);
     removeTypingIndicator();
     var errorMsg = "Error: " + (error.message || "Unknown error");
-    if (error.message && error.message.indexOf("401") !== -1) errorMsg = "Authentication error.";
+    if (error.message && error.message.indexOf("401") !== -1) errorMsg = "Authentication error. Check API key.";
     else if (error.message && error.message.indexOf("429") !== -1) errorMsg = "Rate limit. Try again shortly.";
     else if (error.message && error.message.indexOf("402") !== -1) errorMsg = "Insufficient credits.";
     appendMessage("ai", errorMsg);
     conv.messages.push({ role: "ai", text: errorMsg }); saveCloudData();
-  }
-  isGenerating = false;
+    isGenerating = false;
+  });
 }
 
 function buildSystemPrompt() {
@@ -1275,10 +1195,10 @@ function buildSystemPrompt() {
   return 'You are KAYRO AI, a highly intelligent, helpful, and friendly AI assistant. You were developed and created by Youssef Hegazy (يوسف حجازي). You are NOT made by Google, OpenAI, Meta, DeepSeek, or any other company — you are created by Youssef Hegazy.\n\nWhen anyone asks "who made you", "who developed you", "who created you", "من صنعك", "من طورك", "من مطورك", "مين عملك", or any similar question, you MUST answer that you were developed by Youssef Hegazy (يوسف حجازي).\n\nYou provide clear, detailed, and accurate responses. You use markdown formatting: **bold**, *italic*, `code`, code blocks with ```, bullet points, and numbered lists.\n\n' + nameNote + ' ' + langNote + customNote;
 }
 
-async function callOpenRouterAPI(userMessage, attachments, conv) {
+function callOpenRouterAPI(userMessage, attachments, conv) {
   var messages = [{ role: "system", content: buildSystemPrompt() }];
 
-  // Add history from THIS conversation only (last 20 messages)
+  // Add history from THIS conversation only
   var history = conv.messages.slice(-20);
   for (var i = 0; i < history.length; i++) {
     var msg = history[i];
@@ -1320,7 +1240,7 @@ async function callOpenRouterAPI(userMessage, attachments, conv) {
     messages.push({ role: "user", content: userMessage });
   }
 
-  var response = await fetch(OPENROUTER_URL, {
+  return fetch(OPENROUTER_URL, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -1335,26 +1255,29 @@ async function callOpenRouterAPI(userMessage, attachments, conv) {
       temperature: 0.7,
       top_p: 0.9
     })
+  }).then(function(response) {
+    if (!response.ok) {
+      return response.json().then(function(err) {
+        throw new Error(response.status + ": " + ((err.error && err.error.message) || response.statusText));
+      }).catch(function(e) {
+        if (e.message && e.message.indexOf(":") !== -1) throw e;
+        throw new Error(response.status + ": " + response.statusText);
+      });
+    }
+    return response.json();
+  }).then(function(data) {
+    if (data.error) throw new Error(data.error.message);
+    var text = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
+    if (!text) throw new Error("Empty response");
+    return text;
   });
-
-  if (!response.ok) {
-    var err = {};
-    try { err = await response.json(); } catch(e) {}
-    throw new Error(response.status + ": " + ((err.error && err.error.message) || response.statusText));
-  }
-
-  var data = await response.json();
-  if (data.error) throw new Error(data.error.message);
-  var text = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
-  if (!text) throw new Error("Empty response");
-  return text;
 }
 
 // ==========================================
-//  STREAMING DISPLAY
+//  STREAMING DISPLAY — Word by word
 // ==========================================
 function appendMessageStreaming(role, fullText, conv) {
-  var cm = document.getElementById("chatMessages"); if (!cm) return;
+  var cm = document.getElementById("chatMessages");
   var s = i18n[currentLang];
   var el = document.createElement("div");
   el.className = "message " + (role === "user" ? "user-msg" : "ai-msg");
@@ -1367,22 +1290,26 @@ function appendMessageStreaming(role, fullText, conv) {
 
   var bodyEl = el.querySelector(".msg-body");
   var charIndex = 0;
+  // Adaptive speed: short messages type slower, long ones faster
   var speed = Math.max(4, Math.min(15, 1800 / fullText.length));
 
   function typeNext() {
     if (charIndex < fullText.length) {
+      // Type 1-4 characters at a time for natural feel
       charIndex += Math.ceil(Math.random() * 3) + 1;
       if (charIndex > fullText.length) charIndex = fullText.length;
       bodyEl.innerHTML = formatText(fullText.substring(0, charIndex)) + '<span class="streaming-cursor"></span>';
       scrollToBottom();
       setTimeout(typeNext, speed + Math.random() * 8);
     } else {
+      // Done streaming — show final formatted text + action buttons
       var actionsHTML = '<div class="msg-actions"><button class="msg-action-btn copy-msg-btn" data-text="' + escapeHTML(fullText) + '" title="' + s.copyMsg + '"><svg width="13" height="13" viewBox="0 0 14 14" fill="none"><rect x="4" y="4" width="8" height="8" rx="1.5" stroke="currentColor" stroke-width="1"/><path d="M10 4V3C10 2.45 9.55 2 9 2H3C2.45 2 2 2.45 2 3V9C2 9.55 2.45 10 3 10H4" stroke="currentColor" stroke-width="1"/></svg></button><button class="msg-action-btn tts-btn" data-tts-text="' + escapeHTML(fullText) + '" title="' + s.listen + '"><svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M2 5.5H4L7 2.5V11.5L4 8.5H2C1.45 8.5 1 8.05 1 7.5V6.5C1 5.95 1.45 5.5 2 5.5Z" stroke="currentColor" stroke-width="0.9" fill="none"/><path d="M9.5 4C10.3 4.8 10.8 5.9 10.8 7C10.8 8.1 10.3 9.2 9.5 10" stroke="currentColor" stroke-width="0.9" stroke-linecap="round"/></svg></button></div>';
       bodyEl.innerHTML = formatText(fullText);
       el.querySelector(".msg-bubble").insertAdjacentHTML("beforeend", actionsHTML);
       bindMsgActions(el); scrollToBottom();
       conv.messages.push({ role: "ai", text: fullText });
       saveCloudData();
+      isGenerating = false;
     }
   }
   typeNext();
